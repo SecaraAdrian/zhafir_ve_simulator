@@ -1,0 +1,1683 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zhafir Venus VE1500 – HMI Simulator</title>
+<style>
+/* ===== RESET & BASE ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg-dark: #0a0e1a;
+  --bg-panel: #0d1425;
+  --bg-section: #111a2e;
+  --bg-input: #070d1a;
+  --blue-hdr: #1a3a6b;
+  --blue-btn: #1c4080;
+  --blue-active: #2563b0;
+  --blue-bright: #3b82f6;
+  --blue-light: #60a5fa;
+  --blue-tab: #1e3d7a;
+  --amber: #f59e0b;
+  --green: #22c55e;
+  --red: #ef4444;
+  --red-dark: #7f1d1d;
+  --yellow: #eab308;
+  --text-main: #c8d8f0;
+  --text-dim: #6b83a8;
+  --text-bright: #e2eeff;
+  --text-label: #8aafd4;
+  --border: #1e3a5f;
+  --border-bright: #2a5090;
+  --input-border: #1a3560;
+  --pressed: #0f2040;
+  --shadow: 0 2px 8px rgba(0,0,0,0.6);
+}
+html, body { width: 100%; height: 100%; overflow: hidden; background: #050810; font-family: 'Courier New', monospace; }
+body { display: flex; align-items: center; justify-content: center; }
+
+/* ===== MACHINE FRAME ===== */
+#machine-frame {
+  width: 1280px; height: 800px;
+  background: linear-gradient(160deg, #1a1e2e 0%, #0d1020 100%);
+  border: 3px solid #2a3550;
+  border-radius: 8px;
+  box-shadow: 0 0 60px rgba(30,100,255,0.15), inset 0 0 40px rgba(0,0,0,0.5);
+  display: flex; flex-direction: column;
+  overflow: hidden; position: relative;
+}
+
+/* ===== TOP BAR ===== */
+#top-bar {
+  height: 42px; background: linear-gradient(90deg, #0d1e3d 0%, #1a3a6b 50%, #0d1e3d 100%);
+  border-bottom: 2px solid #2a5090;
+  display: flex; align-items: center; padding: 0 12px; gap: 10px;
+}
+#top-bar .logo { color: #60a5fa; font-size: 11px; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; }
+#top-bar .logo span { color: #93c5fd; }
+#mode-tabs { display: flex; gap: 4px; margin-left: 10px; }
+.mode-tab {
+  padding: 4px 14px; font-size: 11px; cursor: pointer; border-radius: 3px 3px 0 0;
+  background: #0d1e3d; color: var(--text-dim); border: 1px solid var(--border);
+  border-bottom: none; transition: all 0.15s; user-select: none;
+}
+.mode-tab:hover { background: #1a3060; color: var(--text-main); }
+.mode-tab.active { background: var(--blue-active); color: #fff; border-color: var(--blue-bright); }
+.mode-tab:active { background: var(--pressed); }
+#top-status {
+  margin-left: auto; display: flex; gap: 16px; align-items: center;
+}
+.status-box {
+  background: #050d1a; border: 1px solid var(--border); border-radius: 3px;
+  padding: 2px 10px; font-size: 11px; color: var(--text-main);
+  display: flex; align-items: center; gap: 6px;
+}
+.status-box label { color: var(--text-dim); font-size: 10px; }
+.status-box .val { color: var(--blue-light); font-weight: bold; }
+#clock { color: #93c5fd; font-size: 12px; font-weight: bold; min-width: 60px; text-align: right; }
+
+/* ===== MAIN LAYOUT ===== */
+#main { display: flex; flex: 1; overflow: hidden; }
+
+/* ===== LEFT NAV ===== */
+#left-nav {
+  width: 72px; background: #080e1c; border-right: 2px solid var(--border);
+  display: flex; flex-direction: column; align-items: center; padding: 8px 0; gap: 4px;
+}
+.nav-btn {
+  width: 58px; height: 52px; background: var(--bg-section); border: 1px solid var(--border);
+  border-radius: 4px; color: var(--text-dim); font-size: 8px; text-align: center;
+  cursor: pointer; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 2px; transition: all 0.15s; user-select: none;
+}
+.nav-btn:hover { background: #1a3060; color: var(--text-main); border-color: var(--border-bright); }
+.nav-btn.active { background: var(--blue-btn); color: #fff; border-color: var(--blue-bright); }
+.nav-btn:active { background: var(--pressed); transform: scale(0.97); }
+.nav-btn .nav-icon { font-size: 18px; line-height: 1; }
+.nav-sep { width: 50px; height: 1px; background: var(--border); margin: 2px 0; }
+
+/* ===== CENTER CONTENT ===== */
+#center { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* ===== TAB AREA ===== */
+#tab-bar {
+  height: 28px; background: #080e1c; border-bottom: 2px solid var(--border);
+  display: flex; align-items: flex-end; padding: 0 8px; gap: 2px;
+}
+.tab-btn {
+  padding: 3px 12px; font-size: 10px; cursor: pointer; border-radius: 3px 3px 0 0;
+  background: #0d1425; color: var(--text-dim); border: 1px solid var(--border);
+  border-bottom: none; transition: all 0.15s; user-select: none; white-space: nowrap;
+}
+.tab-btn:hover { background: #1a2d50; color: var(--text-main); }
+.tab-btn.active { background: var(--blue-btn); color: #fff; border-color: var(--blue-bright); }
+
+/* ===== SCREEN AREA ===== */
+#screen-area { flex: 1; overflow: hidden; position: relative; }
+.screen-page { display: none; width: 100%; height: 100%; }
+.screen-page.active { display: flex; }
+
+/* ===== INJECT PAGE ===== */
+#page-inject {
+  flex-direction: row; padding: 6px; gap: 6px; background: var(--bg-panel);
+}
+.col { display: flex; flex-direction: column; gap: 5px; }
+.col-left { width: 340px; }
+.col-right { flex: 1; }
+
+/* ===== SECTION BOX ===== */
+.section-box {
+  background: var(--bg-section); border: 1px solid var(--border);
+  border-radius: 3px; overflow: hidden;
+}
+.section-hdr {
+  background: var(--blue-hdr); padding: 3px 8px; font-size: 10px;
+  color: #93c5fd; font-weight: bold; letter-spacing: 0.5px; border-bottom: 1px solid var(--border-bright);
+}
+.section-body { padding: 6px 8px; }
+
+/* ===== PARAM ROWS ===== */
+.param-row { display: flex; align-items: center; gap: 4px; margin-bottom: 4px; min-height: 22px; }
+.param-label { color: var(--text-label); font-size: 10px; min-width: 18px; }
+.stage-row { display: flex; align-items: center; gap: 2px; }
+.stage-arrow { color: var(--text-dim); font-size: 9px; }
+.stage-lbl { color: var(--text-dim); font-size: 9px; }
+
+/* ===== INPUT FIELDS ===== */
+.hmi-input {
+  background: var(--bg-input); border: 1px solid var(--input-border); border-radius: 2px;
+  color: var(--amber); font-size: 11px; font-family: 'Courier New', monospace;
+  text-align: right; padding: 2px 4px; width: 56px; height: 20px; cursor: pointer;
+  transition: border-color 0.15s;
+}
+.hmi-input:focus { outline: none; border-color: var(--blue-bright); color: #fff; }
+.hmi-input.wide { width: 70px; }
+.hmi-input.narrow { width: 44px; }
+.hmi-input.xnarrow { width: 36px; }
+.unit { color: var(--text-dim); font-size: 9px; min-width: 24px; }
+
+/* ===== TEMP ZONES ===== */
+#temp-row { display: flex; gap: 4px; }
+.temp-zone {
+  flex: 1; background: var(--bg-section); border: 1px solid var(--border); border-radius: 3px;
+  display: flex; flex-direction: column; align-items: center; padding: 4px 2px; gap: 2px;
+}
+.temp-zone .zone-lbl { color: var(--text-dim); font-size: 9px; }
+.temp-zone .temp-real { color: #f87171; font-size: 12px; font-weight: bold; }
+.temp-zone .temp-set { color: var(--amber); font-size: 10px; }
+.temp-bar {
+  width: 100%; height: 4px; background: #0d1425; border-radius: 2px; overflow: hidden;
+}
+.temp-bar-fill { height: 100%; background: linear-gradient(90deg, #2563b0, #ef4444); border-radius: 2px; transition: width 0.5s; }
+.temp-zone.heating .temp-real { animation: tempPulse 1s ease-in-out infinite; }
+@keyframes tempPulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+/* ===== MOLD ANIMATION ===== */
+#mold-visual {
+  background: var(--bg-section); border: 1px solid var(--border); border-radius: 3px;
+  padding: 6px; display: flex; flex-direction: column; align-items: center; gap: 4px;
+}
+#mold-canvas { border: 1px solid var(--border); border-radius: 2px; background: #060b14; }
+
+/* ===== STATUS INDICATORS ===== */
+.indicator {
+  width: 10px; height: 10px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.2);
+}
+.ind-red { background: #ef4444; box-shadow: 0 0 6px #ef4444; }
+.ind-green { background: #22c55e; box-shadow: 0 0 6px #22c55e; }
+.ind-yellow { background: #eab308; box-shadow: 0 0 6px #eab308; }
+.ind-blue { background: #3b82f6; box-shadow: 0 0 6px #3b82f6; }
+.ind-off { background: #1a2a40; }
+
+/* ===== CYCLE INFO ===== */
+#cycle-panel {
+  display: flex; gap: 8px; padding: 4px 8px;
+  background: #070d1a; border-top: 1px solid var(--border);
+}
+.cyc-box {
+  background: var(--bg-section); border: 1px solid var(--border); border-radius: 3px;
+  padding: 3px 10px; display: flex; align-items: center; gap: 6px;
+}
+.cyc-box label { color: var(--text-dim); font-size: 10px; }
+.cyc-box .cyc-val { color: var(--blue-light); font-size: 13px; font-weight: bold; font-family: 'Courier New', monospace; }
+.cyc-box.highlight .cyc-val { color: var(--green); }
+
+/* ===== PHASE BAR ===== */
+#phase-bar {
+  display: flex; gap: 2px; padding: 4px 8px; background: #08101e; border-top: 1px solid var(--border);
+}
+.phase-seg {
+  flex: 1; height: 14px; border-radius: 2px; font-size: 8px; color: rgba(255,255,255,0.7);
+  display: flex; align-items: center; justify-content: center; border: 1px solid transparent;
+  transition: all 0.3s;
+}
+.phase-seg.inactive { background: #0d1a2e; border-color: var(--border); color: var(--text-dim); }
+.phase-seg.active { border-color: var(--blue-bright); animation: phasePulse 0.8s ease-in-out infinite; }
+.phase-seg.done { opacity: 0.5; }
+.ph-plastify { background: #1a3d6b; }
+.ph-close { background: #1a4a3d; }
+.ph-inject { background: #4a1a1a; }
+.ph-hold { background: #3d3a1a; }
+.ph-cool { background: #1a2a4a; }
+.ph-open { background: #2a4a1a; }
+.ph-eject { background: #4a2a1a; }
+@keyframes phasePulse { 0%,100%{opacity:1;box-shadow:0 0 8px currentColor} 50%{opacity:0.7;box-shadow:none} }
+
+/* ===== CONTROL BUTTONS ===== */
+#control-bar {
+  display: flex; gap: 6px; padding: 6px 8px; background: #060b14; border-top: 2px solid var(--border);
+  align-items: center;
+}
+.ctrl-btn {
+  padding: 6px 16px; font-size: 11px; border-radius: 4px; cursor: pointer;
+  border: 1px solid; font-weight: bold; letter-spacing: 0.5px; transition: all 0.15s;
+  user-select: none; font-family: 'Courier New', monospace;
+}
+.ctrl-btn:active { transform: scale(0.97); filter: brightness(0.85); }
+.btn-green { background: #14532d; color: #4ade80; border-color: #22c55e; }
+.btn-green:hover { background: #166534; box-shadow: 0 0 10px rgba(34,197,94,0.4); }
+.btn-red { background: #7f1d1d; color: #fca5a5; border-color: #ef4444; }
+.btn-red:hover { background: #991b1b; box-shadow: 0 0 10px rgba(239,68,68,0.4); }
+.btn-blue { background: #1e3a5f; color: #93c5fd; border-color: #3b82f6; }
+.btn-blue:hover { background: #1e40af; box-shadow: 0 0 10px rgba(59,130,246,0.4); }
+.btn-amber { background: #451a03; color: #fcd34d; border-color: #f59e0b; }
+.btn-amber:hover { background: #78350f; }
+.btn-gray { background: #1a2235; color: #8aafd4; border-color: #2a3a50; }
+.btn-gray:hover { background: #1e2d45; }
+.ctrl-btn.disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+#estop {
+  margin-left: auto; width: 52px; height: 52px; border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #ff6060, #cc0000, #7f0000);
+  border: 3px solid #ff4444; color: #fff; font-size: 8px; font-weight: bold;
+  cursor: pointer; box-shadow: 0 0 15px rgba(255,0,0,0.5); transition: all 0.1s;
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  line-height: 1.2; letter-spacing: 0.5px;
+}
+#estop:active { transform: scale(0.93); box-shadow: 0 0 5px rgba(255,0,0,0.3); }
+
+/* ===== RIGHT PANEL ===== */
+#right-panel {
+  width: 220px; background: #08101e; border-left: 2px solid var(--border);
+  display: flex; flex-direction: column; padding: 6px; gap: 5px; overflow-y: auto;
+}
+#right-panel::-webkit-scrollbar { width: 4px; }
+#right-panel::-webkit-scrollbar-track { background: #060b14; }
+#right-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.rp-section { background: var(--bg-section); border: 1px solid var(--border); border-radius: 3px; }
+.rp-hdr { background: #0d2040; padding: 3px 8px; font-size: 9px; color: #60a5fa; border-bottom: 1px solid var(--border); font-weight: bold; letter-spacing: 1px; text-transform: uppercase; }
+.rp-body { padding: 5px 7px; }
+.rp-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; }
+.rp-lbl { color: var(--text-dim); font-size: 9px; }
+.rp-val { color: var(--amber); font-size: 10px; font-weight: bold; }
+.rp-val.green { color: var(--green); }
+.rp-val.red { color: var(--red); }
+.rp-val.blue { color: var(--blue-light); }
+
+/* ===== ALARM PANEL ===== */
+#alarm-overlay {
+  display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.7);
+  z-index: 100; align-items: center; justify-content: center;
+}
+#alarm-overlay.show { display: flex; }
+#alarm-box {
+  background: #0d1425; border: 2px solid #ef4444; border-radius: 6px;
+  width: 520px; max-height: 400px; display: flex; flex-direction: column;
+  box-shadow: 0 0 40px rgba(239,68,68,0.5);
+}
+#alarm-hdr {
+  background: #7f1d1d; padding: 8px 16px; display: flex; align-items: center; gap: 8px;
+  border-radius: 4px 4px 0 0;
+}
+#alarm-hdr h3 { color: #fca5a5; font-size: 13px; flex: 1; }
+#alarm-close { background: none; border: 1px solid #ef4444; color: #fca5a5; padding: 2px 10px; border-radius: 3px; cursor: pointer; font-size: 11px; }
+#alarm-list { flex: 1; overflow-y: auto; padding: 8px; }
+.alarm-item { display: flex; gap: 8px; align-items: flex-start; padding: 5px 8px; border-radius: 3px; margin-bottom: 4px; border: 1px solid; }
+.alarm-item.error { background: rgba(127,29,29,0.4); border-color: #ef4444; color: #fca5a5; }
+.alarm-item.warning { background: rgba(78,61,0,0.4); border-color: #f59e0b; color: #fcd34d; }
+.alarm-item .alarm-code { font-size: 10px; font-weight: bold; min-width: 50px; }
+.alarm-item .alarm-msg { font-size: 10px; }
+.alarm-item .alarm-time { margin-left: auto; font-size: 9px; opacity: 0.7; }
+
+/* ===== RECIPE MODAL ===== */
+#recipe-overlay {
+  display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.75);
+  z-index: 90; align-items: center; justify-content: center;
+}
+#recipe-overlay.show { display: flex; }
+#recipe-box {
+  background: #0d1425; border: 2px solid var(--border-bright); border-radius: 6px;
+  width: 400px; box-shadow: var(--shadow);
+}
+#recipe-hdr { background: var(--blue-hdr); padding: 8px 14px; display: flex; align-items: center; border-radius: 4px 4px 0 0; }
+#recipe-hdr h3 { color: #93c5fd; font-size: 12px; flex: 1; }
+.recipe-list { padding: 8px; display: flex; flex-direction: column; gap: 4px; }
+.recipe-item {
+  background: var(--bg-section); border: 1px solid var(--border); border-radius: 3px;
+  padding: 6px 10px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.15s;
+}
+.recipe-item:hover { background: #1a3060; border-color: var(--blue-bright); }
+.recipe-item .r-name { color: var(--text-main); font-size: 11px; }
+.recipe-item .r-mat { color: var(--text-dim); font-size: 9px; }
+.recipe-item .r-icon { font-size: 20px; }
+.recipe-footer { padding: 8px; display: flex; gap: 6px; justify-content: flex-end; border-top: 1px solid var(--border); }
+
+/* ===== ENERGY GAUGE ===== */
+.gauge-wrap { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.gauge-arc { position: relative; width: 80px; height: 44px; overflow: hidden; }
+.gauge-arc canvas { position: absolute; top: 0; left: 0; }
+.gauge-val { color: var(--green); font-size: 12px; font-weight: bold; text-align: center; }
+.gauge-lbl { color: var(--text-dim); font-size: 8px; text-align: center; }
+
+/* ===== SCROLLABLE PARAM TABLE ===== */
+.param-table { width: 100%; border-collapse: collapse; }
+.param-table td { padding: 1px 4px; font-size: 10px; }
+.param-table .td-lbl { color: var(--text-dim); }
+.param-table .td-val { color: var(--amber); text-align: right; }
+.param-table .td-unit { color: var(--text-dim); }
+
+/* ===== STAGE HEADER ROW ===== */
+.stage-hdr-row {
+  display: flex; gap: 2px; margin-bottom: 2px; align-items: center;
+}
+.stage-hdr-row .sh { font-size: 8px; color: var(--text-dim); text-align: center; }
+
+/* ===== INJECT STAGE TABLE ===== */
+.inject-grid {
+  display: grid; gap: 2px; margin-bottom: 4px;
+}
+.ig-row { display: flex; align-items: center; gap: 3px; }
+.ig-lbl { color: var(--text-label); font-size: 10px; min-width: 18px; }
+.ig-unit { color: var(--text-dim); font-size: 9px; min-width: 28px; }
+
+/* ===== PROGRESS BAR ===== */
+.prog-bar { height: 8px; background: #0a1020; border: 1px solid var(--border); border-radius: 2px; overflow: hidden; margin-bottom: 3px; }
+.prog-fill { height: 100%; border-radius: 2px; transition: width 0.3s ease; }
+.prog-blue { background: linear-gradient(90deg, #1e3a6b, #3b82f6); }
+.prog-red { background: linear-gradient(90deg, #7f1d1d, #ef4444); }
+.prog-green { background: linear-gradient(90deg, #14532d, #22c55e); }
+.prog-amber { background: linear-gradient(90deg, #451a03, #f59e0b); }
+
+/* ===== OTHER PAGES ===== */
+#page-temp { flex-direction: column; padding: 8px; gap: 6px; background: var(--bg-panel); }
+#page-alarm { flex-direction: column; padding: 8px; gap: 6px; background: var(--bg-panel); }
+#page-product { flex-direction: column; padding: 8px; gap: 6px; background: var(--bg-panel); }
+#page-info { flex-direction: column; padding: 8px; gap: 6px; background: var(--bg-panel); }
+
+/* ===== PRODUCT CARDS ===== */
+.product-grid { display: flex; gap: 10px; flex-wrap: wrap; }
+.product-card {
+  width: 180px; background: var(--bg-section); border: 2px solid var(--border);
+  border-radius: 6px; padding: 12px; cursor: pointer; transition: all 0.2s;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.product-card:hover { border-color: var(--blue-bright); background: #1a2d50; }
+.product-card.selected { border-color: var(--green); background: #0d2020; }
+.product-card .pc-icon { font-size: 36px; }
+.product-card .pc-name { color: var(--text-main); font-size: 12px; font-weight: bold; text-align: center; }
+.product-card .pc-mat { color: var(--text-dim); font-size: 10px; }
+.product-card .pc-weight { color: var(--amber); font-size: 10px; }
+
+/* ===== INFO TABLE ===== */
+.info-table { width: 100%; border-collapse: collapse; }
+.info-table th { background: var(--blue-hdr); color: #93c5fd; font-size: 10px; padding: 4px 8px; text-align: left; }
+.info-table td { color: var(--text-main); font-size: 10px; padding: 3px 8px; border-bottom: 1px solid var(--border); }
+.info-table tr:hover td { background: #1a2a40; }
+
+/* ===== LUBRICATION NOTICE ===== */
+#lube-notice {
+  background: #1a1a00; border: 1px solid var(--yellow); border-radius: 3px;
+  padding: 4px 10px; font-size: 10px; color: var(--yellow); display: flex; align-items: center; gap: 6px;
+}
+
+/* ===== NOTIFICATION TOAST ===== */
+#toast {
+  position: absolute; bottom: 80px; right: 230px; background: #0d1e3d;
+  border: 1px solid var(--blue-bright); border-radius: 4px; padding: 8px 14px;
+  color: var(--text-main); font-size: 11px; z-index: 200;
+  transform: translateY(20px); opacity: 0; transition: all 0.3s; pointer-events: none;
+}
+#toast.show { transform: translateY(0); opacity: 1; }
+
+/* scrollbar global */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: #060b14; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ===== MOLD DIAGRAM ===== */
+#mold-diag { display: flex; align-items: center; justify-content: center; gap: 0; }
+.mold-half {
+  width: 60px; height: 90px; background: linear-gradient(160deg, #2a3a5a, #1a2a40);
+  border: 2px solid #3a5080; border-radius: 4px; position: relative; transition: transform 0.5s ease;
+  display: flex; align-items: center;
+}
+.mold-half.left { justify-content: flex-end; border-radius: 6px 2px 2px 6px; }
+.mold-half.right { justify-content: flex-start; border-radius: 2px 6px 6px 2px; }
+.mold-cavity {
+  position: absolute; background: #060b14; border-radius: 2px;
+  transition: all 0.5s ease;
+}
+.mold-fill-overlay {
+  position: absolute; border-radius: 2px; background: linear-gradient(135deg, #ff8c00, #ff4400);
+  opacity: 0; transition: height 0.8s ease, opacity 0.3s;
+}
+.mold-gap { width: 20px; display: flex; align-items: center; justify-content: center; }
+.mold-gap-line { width: 2px; height: 80px; background: linear-gradient(180deg, transparent, #3b82f6, transparent); }
+.screw-visual {
+  display: flex; align-items: center; gap: 4px; padding: 3px 0;
+}
+.screw-body {
+  height: 18px; background: linear-gradient(180deg, #3a5080, #1a3060, #3a5080);
+  border-radius: 2px; border: 1px solid #4a70a0; transition: width 0.5s ease;
+  position: relative; overflow: hidden;
+}
+.screw-flights {
+  position: absolute; inset: 0; background: repeating-linear-gradient(
+    90deg, transparent, transparent 6px, rgba(60,120,200,0.4) 6px, rgba(60,120,200,0.4) 8px
+  ); transition: background-position 0.1s linear;
+}
+.screw-tip { width: 8px; height: 18px; background: linear-gradient(90deg, #4a70a0, #1a3060); clip-path: polygon(0 0,100% 50%,0 100%); border-radius: 1px; }
+.nozzle { width: 12px; height: 14px; background: linear-gradient(180deg, #3a5080, #1a2040); border-radius: 0 3px 3px 0; border: 1px solid #4a70a0; }
+
+/* flashing alarm */
+@keyframes alarmFlash { 0%,100%{background:#7f1d1d} 50%{background:#ef4444} }
+.alarm-flashing { animation: alarmFlash 0.5s ease-in-out infinite; }
+
+/* running indicator */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinning { display: inline-block; animation: spin 1s linear infinite; }
+</style>
+</head>
+<body>
+
+<div id="machine-frame">
+
+  <!-- TOP BAR -->
+  <div id="top-bar">
+    <div class="logo">☰ <span>ZHAFIR</span> PLASTICS MACHINERY &nbsp;|&nbsp; VE1500</div>
+    <div id="mode-tabs">
+      <div class="mode-tab" id="tab-manual" onclick="setMode('Manual')">Manual</div>
+      <div class="mode-tab active" id="tab-auto" onclick="setMode('Auto')">Auto</div>
+      <div class="mode-tab" id="tab-setup" onclick="setMode('Setare')">Setare</div>
+    </div>
+    <div id="top-status">
+      <div id="lube-notice">🔧 Intretinere – Lubrifiere Manuala</div>
+      <div class="status-box"><label>Cycle Mold:</label><span class="val" id="cycle-count">787650</span></div>
+      <div class="status-box"><label>Cycle Time:</label><span class="val" id="cycle-time-top">7.68</span> <span class="val" style="font-size:9px">s</span>
+        <span class="indicator" id="ind-run" style="margin-left:4px"></span>
+      </div>
+      <div id="clock">--:--:--</div>
+    </div>
+  </div>
+
+  <div id="main">
+
+    <!-- LEFT NAV -->
+    <div id="left-nav">
+      <div class="nav-btn active" onclick="switchPage('inject')" id="nav-inject"><div class="nav-icon">💉</div>Inject</div>
+      <div class="nav-btn" onclick="switchPage('temp')" id="nav-temp"><div class="nav-icon">🌡️</div>Incalzire</div>
+      <div class="nav-btn" onclick="switchPage('product')" id="nav-product"><div class="nav-icon">📦</div>Produs</div>
+      <div class="nav-btn" onclick="switchPage('info')" id="nav-info"><div class="nav-icon">ℹ️</div>Info Matrita</div>
+      <div class="nav-sep"></div>
+      <div class="nav-btn" onclick="toggleAlarms()" id="nav-alarm"><div class="nav-icon">🔔</div>Alarme</div>
+      <div class="nav-sep"></div>
+      <div class="nav-btn" onclick="showRecipes()" id="nav-recipe"><div class="nav-icon">💾</div>Retete</div>
+      <div class="nav-btn" onclick="switchPage('energy')" id="nav-energy"><div class="nav-icon">⚡</div>Energie</div>
+    </div>
+
+    <!-- CENTER -->
+    <div id="center">
+      <!-- TAB BAR -->
+      <div id="tab-bar">
+        <div class="tab-btn active" onclick="switchTab('main')">Parametri Principali</div>
+        <div class="tab-btn" onclick="switchTab('mold')">Matrita</div>
+        <div class="tab-btn" onclick="switchTab('eject')">Ejectare</div>
+        <div class="tab-btn" onclick="switchTab('expert')">Expert</div>
+        <div class="tab-btn" onclick="switchTab('monitor')">Monitor Ciclu</div>
+      </div>
+
+      <!-- SCREEN AREA -->
+      <div id="screen-area">
+
+        <!-- PAGE: INJECT (main) -->
+        <div class="screen-page active" id="page-inject">
+          <div class="col col-left" style="display:flex;flex-direction:column;gap:5px;">
+
+            <!-- INJECT SECTION -->
+            <div class="section-box">
+              <div class="section-hdr">Injectare</div>
+              <div class="section-body">
+                <div style="font-size:9px;color:var(--text-dim);margin-bottom:3px;">
+                  S6←S5←S4←S3←S2←S1←SB
+                </div>
+                <div class="ig-row">
+                  <span class="ig-lbl">Ps</span>
+                  <input class="hmi-input xnarrow" id="i-ps-sb" value="13.50" onchange="paramChanged()">
+                  <input class="hmi-input xnarrow" id="i-ps-s2" value="" onchange="paramChanged()">
+                  <input class="hmi-input xnarrow" id="i-ps-s1" value="21.99" onchange="paramChanged()">
+                  <input class="hmi-input xnarrow" id="i-ps-s0" value="25.00" onchange="paramChanged()">
+                  <span class="ig-unit">mm</span>
+                </div>
+                <div class="ig-row" style="margin-top:2px;">
+                  <span class="ig-lbl">V</span>
+                  <input class="hmi-input xnarrow" id="i-v-sb" value="70.00" onchange="paramChanged()">
+                  <input class="hmi-input xnarrow" id="i-v-s2" value="" onchange="paramChanged()">
+                  <input class="hmi-input xnarrow" id="i-v-s1" value="" onchange="paramChanged()">
+                  <input class="hmi-input xnarrow" id="i-v-s0" value="80.00" onchange="paramChanged()">
+                  <span class="ig-unit">mm/c</span>
+                </div>
+                <div class="ig-row" style="margin-top:2px;">
+                  <span class="ig-lbl">Pr</span>
+                  <span style="color:var(--text-dim);font-size:9px;margin-left:4px;">Max: </span>
+                  <input class="hmi-input narrow" id="i-pr" value="69.00" onchange="paramChanged()">
+                  <span class="ig-unit">Mpa</span>
+                </div>
+                <!-- Pressure bar -->
+                <div style="margin-top:3px;">
+                  <div style="display:flex;justify-content:space-between;font-size:8px;color:var(--text-dim);margin-bottom:1px;"><span>Presiune Injectare</span><span id="inj-pr-val">0</span> Mpa</div>
+                  <div class="prog-bar"><div class="prog-fill prog-red" id="inj-pr-bar" style="width:0%"></div></div>
+                </div>
+                <div style="margin-top:3px;">
+                  <div style="display:flex;justify-content:space-between;font-size:8px;color:var(--text-dim);margin-bottom:1px;"><span>Viteza Injectare</span><span id="inj-v-val">0</span> mm/c</div>
+                  <div class="prog-bar"><div class="prog-fill prog-blue" id="inj-v-bar" style="width:0%"></div></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- PRESIUNE MENTINERE -->
+            <div class="section-box">
+              <div class="section-hdr">Presiune Mentinere</div>
+              <div class="section-body">
+                <div style="font-size:9px;color:var(--text-dim);margin-bottom:3px;">PE←P3←P2←P1</div>
+                <div class="ig-row">
+                  <span class="ig-lbl">Pr</span>
+                  <input class="hmi-input narrow" id="pm-pr" value="100.00" onchange="paramChanged()">
+                  <span class="ig-unit">Mpa</span>
+                </div>
+                <div class="ig-row" style="margin-top:2px;">
+                  <span class="ig-lbl">T</span>
+                  <input class="hmi-input narrow" id="pm-t" value="1.00" onchange="paramChanged()">
+                  <span class="ig-unit">s</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- INCARCARE (Plastifiere) -->
+            <div class="section-box">
+              <div class="section-hdr">Incarcare (Plastifiere)</div>
+              <div class="section-body">
+                <div class="ig-row">
+                  <span class="ig-lbl">Ps</span>
+                  <input class="hmi-input xnarrow" id="pl-ps" value="" onchange="paramChanged()">
+                  <span class="ig-lbl" style="margin-left:6px;">S1→S2→SE</span>
+                  <input class="hmi-input xnarrow" id="pl-ps2" value="20.00" onchange="paramChanged()">
+                  <span class="ig-unit">mm</span>
+                </div>
+                <div class="ig-row" style="margin-top:2px;">
+                  <span class="ig-lbl">V</span>
+                  <input class="hmi-input xnarrow" id="pl-v" value="" onchange="paramChanged()">
+                  <span class="ig-unit">mm/c</span>
+                  <input class="hmi-input xnarrow" id="pl-v2" value="340" onchange="paramChanged()">
+                  <span class="ig-unit">rpm</span>
+                </div>
+                <div class="ig-row" style="margin-top:2px;">
+                  <span class="ig-lbl">BP</span>
+                  <input class="hmi-input narrow" id="pl-bp" value="5.00" onchange="paramChanged()">
+                  <span class="ig-unit">Mpa</span>
+                  <span style="margin-left:4px;color:var(--text-dim);font-size:9px;">SB Ps: </span>
+                  <input class="hmi-input xnarrow" id="pl-sb-ps" value="5.00" onchange="paramChanged()">
+                </div>
+                <!-- Screw visual -->
+                <div style="margin-top:4px;">
+                  <div style="font-size:8px;color:var(--text-dim);margin-bottom:2px;">Pozitie Surub</div>
+                  <div class="screw-visual">
+                    <div class="nozzle"></div>
+                    <div class="screw-body" id="screw-body" style="width:120px;"><div class="screw-flights" id="screw-flights"></div></div>
+                    <div class="screw-tip"></div>
+                    <span style="font-size:9px;color:var(--amber);margin-left:4px;" id="screw-pos-txt">80 mm</span>
+                  </div>
+                  <div class="prog-bar" style="margin-top:2px;"><div class="prog-fill prog-amber" id="screw-bar" style="width:60%"></div></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- EJECT -->
+            <div class="section-box">
+              <div class="section-hdr">Ejectare</div>
+              <div class="section-body">
+                <div style="font-size:9px;color:var(--text-dim);margin-bottom:2px;">SE←S2←S1 &nbsp;│&nbsp; Eject Inainte &nbsp;│&nbsp; Eject Intarziere S1→S2→SE</div>
+                <div class="ig-row">
+                  <span class="ig-lbl">Ps</span>
+                  <input class="hmi-input xnarrow" id="ej-ps" value="2.50" onchange="paramChanged()">
+                  <span class="ig-unit">mm</span>
+                  <span class="ig-lbl" style="margin-left:4px;">Ps</span>
+                  <input class="hmi-input xnarrow" id="ej-ps2" value="" onchange="paramChanged()">
+                  <input class="hmi-input xnarrow" id="ej-ps3" value="20.00" onchange="paramChanged()">
+                  <span class="ig-unit">mm</span>
+                </div>
+                <div class="ig-row" style="margin-top:2px;">
+                  <span class="ig-lbl">V</span>
+                  <input class="hmi-input xnarrow" id="ej-v" value="50.0" onchange="paramChanged()">
+                  <span class="ig-unit">%</span>
+                  <span class="ig-lbl" style="margin-left:4px;">V</span>
+                  <input class="hmi-input xnarrow" id="ej-v2" value="" onchange="paramChanged()">
+                  <input class="hmi-input xnarrow" id="ej-v3" value="20.0" onchange="paramChanged()">
+                  <span class="ig-unit">%</span>
+                </div>
+              </div>
+            </div>
+
+          </div><!-- col-left -->
+
+          <!-- COL RIGHT -->
+          <div class="col col-right" style="display:flex;flex-direction:column;gap:5px;">
+
+            <!-- DESCHIDERE MATRITA -->
+            <div class="section-box">
+              <div class="section-hdr">Deschidere Matrita</div>
+              <div class="section-body">
+                <div style="font-size:9px;color:var(--text-dim);margin-bottom:3px;">SE←S5←S4←S3←S2←S1</div>
+                <div class="ig-row">
+                  <span class="ig-lbl">Ps</span>
+                  <input class="hmi-input narrow" id="dm-ps-s1" value="250.00" onchange="paramChanged()">
+                  <input class="hmi-input xnarrow" id="dm-ps-s2" value="" onchange="paramChanged()">
+                  <input class="hmi-input xnarrow" id="dm-ps-s3" value="" onchange="paramChanged()">
+                  <input class="hmi-input xnarrow" id="dm-ps-se" value="40.00" onchange="paramChanged()">
+                  <input class="hmi-input xnarrow" id="dm-ps-s1b" value="5.00" onchange="paramChanged()">
+                  <span class="ig-unit">mm</span>
+                </div>
+                <div class="ig-row" style="margin-top:2px;">
+                  <span class="ig-lbl">V</span>
+                  <input class="hmi-input narrow" id="dm-v-s1" value="100.0" onchange="paramChanged()">
+                  <input class="hmi-input xnarrow" id="dm-v-s2" value="" onchange="paramChanged()">
+                  <input class="hmi-input xnarrow" id="dm-v-s3" value="" onchange="paramChanged()">
+                  <input class="hmi-input xnarrow" id="dm-v-se" value="20.0" onchange="paramChanged()">
+                  <input class="hmi-input xnarrow" id="dm-v-s1b" value="3.0" onchange="paramChanged()">
+                  <span class="ig-unit">%</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- INCHIDERE MATRITA -->
+            <div class="section-box">
+              <div class="section-hdr">Inchidere Matrita</div>
+              <div class="section-body">
+                <div style="font-size:9px;color:var(--text-dim);margin-bottom:3px;">S0→S1→S2→S3→S4→S5→SE</div>
+                <div class="ig-row">
+                  <span class="ig-lbl">Ps</span>
+                  <input class="hmi-input narrow" id="im-ps-s0" value="250.00" onchange="paramChanged()">
+                  <input class="hmi-input xnarrow" id="im-ps-s1" value="" onchange="paramChanged()">
+                  <input class="hmi-input xnarrow" id="im-ps-s2" value="100.00" onchange="paramChanged()">
+                  <input class="hmi-input xnarrow" id="im-ps-s3" value="20.00" onchange="paramChanged()">
+                  <input class="hmi-input xnarrow" id="im-ps-s4" value="5.00" onchange="paramChanged()">
+                  <input class="hmi-input xnarrow" id="im-ps-se" value="0.00" onchange="paramChanged()">
+                  <span class="ig-unit">mm</span>
+                </div>
+                <div class="ig-row" style="margin-top:2px;">
+                  <span class="ig-lbl">V</span>
+                  <input class="hmi-input narrow" id="im-v-s0" value="" onchange="paramChanged()">
+                  <input class="hmi-input xnarrow" id="im-v-s1" value="" onchange="paramChanged()">
+                  <input class="hmi-input xnarrow" id="im-v-s2" value="100.0" onchange="paramChanged()">
+                  <input class="hmi-input xnarrow" id="im-v-s3" value="90.0" onchange="paramChanged()">
+                  <input class="hmi-input xnarrow" id="im-v-s4" value="60.0" onchange="paramChanged()">
+                  <input class="hmi-input xnarrow" id="im-v-se" value="20.0" onchange="paramChanged()">
+                  <span class="ig-unit">%</span>
+                </div>
+                <!-- Mold position bar -->
+                <div style="margin-top:4px;">
+                  <div style="display:flex;justify-content:space-between;font-size:8px;color:var(--text-dim);margin-bottom:1px;"><span>Pozitie Matrita</span><span id="mold-pos-txt">0 mm</span></div>
+                  <div class="prog-bar"><div class="prog-fill prog-green" id="mold-pos-bar" style="width:0%"></div></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- RIGHT SIDE PARAMS -->
+            <div style="display:flex;gap:5px;flex:1;">
+              <!-- MOLD DIAGRAM -->
+              <div class="section-box" style="flex:1;">
+                <div class="section-hdr">Vizualizare Matrita</div>
+                <div class="section-body" style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+                  <div id="mold-diag">
+                    <div class="mold-half left" id="mold-left">
+                      <div class="mold-cavity" id="mold-cav-l" style="right:-2px;width:18px;height:50px;background:#060b14;border-radius:2px 0 0 2px;"></div>
+                    </div>
+                    <div class="mold-gap"><div class="mold-gap-line" id="mold-gap-line"></div></div>
+                    <div class="mold-half right" id="mold-right">
+                      <div class="mold-cavity" id="mold-cav-r" style="left:-2px;width:18px;height:50px;background:#060b14;border-radius:0 2px 2px 0;"></div>
+                      <div class="mold-fill-overlay" id="mold-fill" style="left:-2px;width:18px;bottom:0px;height:0%;border-radius:0 2px 2px 0;"></div>
+                    </div>
+                  </div>
+                  <div style="display:flex;gap:8px;font-size:9px;">
+                    <span style="color:var(--text-dim);">Stare: </span>
+                    <span id="mold-state-txt" style="color:var(--green);">DESCHISA</span>
+                  </div>
+                  <!-- Cycle phases -->
+                  <canvas id="mold-canvas" width="200" height="80"></canvas>
+                </div>
+              </div>
+
+              <!-- MISC PARAMS -->
+              <div style="display:flex;flex-direction:column;gap:5px;width:190px;">
+                <div class="section-box">
+                  <div class="section-hdr">Parametri Auxiliari</div>
+                  <div class="section-body">
+                    <div class="rp-row"><span class="rp-lbl">Presiune Protectie Matrita</span><span></span></div>
+                    <div class="ig-row" style="margin-bottom:3px;">
+                      <input class="hmi-input narrow" id="aux-ppm" value="1.5" onchange="paramChanged()">
+                      <span class="ig-unit">%</span>
+                    </div>
+                    <div class="rp-row"><span class="rp-lbl">Timp Siguranta Inchidere</span></div>
+                    <div class="ig-row" style="margin-bottom:3px;">
+                      <input class="hmi-input narrow" id="aux-tsi" value="3.00" onchange="paramChanged()">
+                      <span class="ig-unit">s</span>
+                    </div>
+                    <div class="rp-row"><span class="rp-lbl">Timp Racire</span></div>
+                    <div class="ig-row" style="margin-bottom:3px;">
+                      <input class="hmi-input narrow" id="aux-tr" value="2.50" onchange="paramChanged()">
+                      <span class="ig-unit">s</span>
+                    </div>
+                    <div class="rp-row"><span class="rp-lbl">Mod Eject</span><input class="hmi-input narrow" id="aux-me" value="Normal" style="font-size:9px;"></div>
+                    <div class="rp-row" style="margin-top:3px;"><span class="rp-lbl">Mod Surub Inapoi</span><input class="hmi-input narrow" id="aux-msi" value="Dupa Inc" style="font-size:8px;"></div>
+                  </div>
+                </div>
+                <div class="section-box">
+                  <div class="section-hdr">V/P Switch</div>
+                  <div class="section-body">
+                    <div class="ig-row"><span class="rp-lbl">V/P</span><input class="hmi-input narrow" id="vp-mode" value="Pozitie" style="font-size:9px;"></div>
+                    <div class="ig-row" style="margin-top:2px;"><span class="ig-lbl">Timp V/P</span><input class="hmi-input xnarrow" id="vp-t" value="1.00"><span class="ig-unit">s</span></div>
+                    <div class="ig-row" style="margin-top:2px;"><span class="ig-lbl">V/P Poz</span><input class="hmi-input xnarrow" id="vp-pos" value="13.50"><span class="ig-unit">mm</span></div>
+                    <div class="ig-row" style="margin-top:2px;"><span class="ig-lbl">Viteza V/P</span><input class="hmi-input xnarrow" id="vp-v" value="50.00"><span class="ig-unit">mm/c</span></div>
+                  </div>
+                </div>
+              </div>
+            </div><!-- inner flex -->
+
+          </div><!-- col-right -->
+        </div><!-- page-inject -->
+
+        <!-- PAGE: TEMP -->
+        <div class="screen-page" id="page-temp">
+          <div class="section-box" style="flex:1;">
+            <div class="section-hdr">Temperatura Zone Cilindru</div>
+            <div class="section-body">
+              <div id="temp-row" style="gap:6px;margin-bottom:10px;"></div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <div class="section-box" style="flex:1;">
+                  <div class="section-hdr">Duza</div>
+                  <div class="section-body">
+                    <div class="ig-row"><span class="ig-lbl">Real</span><span id="t-duza-r" class="rp-val red">185.1</span><span class="ig-unit">°C</span></div>
+                    <div class="ig-row"><span class="ig-lbl">Setare</span><input class="hmi-input narrow" id="t-duza-s" value="185.0"><span class="ig-unit">°C</span></div>
+                  </div>
+                </div>
+                <div class="section-box" style="flex:1;">
+                  <div class="section-hdr">Parametri Termali</div>
+                  <div class="section-body">
+                    <div class="ig-row"><span class="rp-lbl">Deviere permisa: </span><input class="hmi-input xnarrow" value="±5"><span class="ig-unit">°C</span></div>
+                    <div class="ig-row" style="margin-top:4px;"><span class="rp-lbl">Timp incalzire: </span><input class="hmi-input narrow" value="15.0"><span class="ig-unit">min</span></div>
+                    <div class="ig-row" style="margin-top:4px;"><span class="rp-lbl">Protectie supraincalzire: </span><input class="hmi-input xnarrow" value="ON" style="font-size:9px;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PAGE: PRODUCT -->
+        <div class="screen-page" id="page-product">
+          <div class="section-box" style="flex:1;">
+            <div class="section-hdr">Selectare Produs & Material</div>
+            <div class="section-body">
+              <div style="color:var(--text-dim);font-size:10px;margin-bottom:10px;">Selectati produsul dorit. Parametrii vor fi incarcati automat.</div>
+              <div class="product-grid" id="product-grid"></div>
+              <div style="margin-top:12px;display:flex;gap:8px;">
+                <button class="ctrl-btn btn-green" onclick="loadProduct()">▶ Incarcare Reteta</button>
+                <button class="ctrl-btn btn-blue" onclick="showRecipes()">💾 Salvare Reteta</button>
+              </div>
+              <div style="margin-top:10px;" id="product-params-box" style="display:none;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PAGE: INFO -->
+        <div class="screen-page" id="page-info">
+          <div class="section-box" style="flex:1;">
+            <div class="section-hdr">Info Matrita & Statistici</div>
+            <div class="section-body">
+              <table class="info-table" style="margin-bottom:10px;">
+                <tr><th>Parametru</th><th>Valoare</th><th>Unitate</th></tr>
+                <tr><td>Total Cicluri Matrita</td><td id="inf-cycles">787,650</td><td>-</td></tr>
+                <tr><td>Timp Ciclu Mediu</td><td>7.72</td><td>s</td></tr>
+                <tr><td>Timp Ciclu Min</td><td>7.54</td><td>s</td></tr>
+                <tr><td>Timp Ciclu Max</td><td>8.21</td><td>s</td></tr>
+                <tr><td>Piese Produse (schimb)</td><td id="inf-shift">0</td><td>buc</td></tr>
+                <tr><td>Piese Rebutate</td><td>0</td><td>buc</td></tr>
+                <tr><td>Eficienta OEE</td><td>94.2</td><td>%</td></tr>
+                <tr><td>Greutate Impuscare</td><td>45.2</td><td>g</td></tr>
+                <tr><td>Material</td><td>PP Homopolimer</td><td>-</td></tr>
+                <tr><td>Matrita</td><td>1 cavitate</td><td>-</td></tr>
+              </table>
+              <button class="ctrl-btn btn-blue" onclick="resetShiftCount()">Reset Contor Schimb</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- PAGE: ENERGY -->
+        <div class="screen-page" id="page-energy" style="flex-direction:column;padding:8px;gap:6px;background:var(--bg-panel);">
+          <div class="section-box" style="flex:1;">
+            <div class="section-hdr">⚡ Consum Energie – Zhafir Full Electric VE1500</div>
+            <div class="section-body">
+              <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;">
+                <div class="gauge-wrap">
+                  <canvas id="gauge-total" width="100" height="60"></canvas>
+                  <div class="gauge-val" id="gauge-total-val">12.4</div>
+                  <div class="gauge-lbl">kW Total</div>
+                </div>
+                <div class="gauge-wrap">
+                  <canvas id="gauge-inject" width="100" height="60"></canvas>
+                  <div class="gauge-val" id="gauge-inject-val" style="color:var(--amber);">4.2</div>
+                  <div class="gauge-lbl">kW Injectare</div>
+                </div>
+                <div class="gauge-wrap">
+                  <canvas id="gauge-plast" width="100" height="60"></canvas>
+                  <div class="gauge-val" id="gauge-plast-val" style="color:var(--blue-light);">3.1</div>
+                  <div class="gauge-lbl">kW Plastifiere</div>
+                </div>
+                <div class="gauge-wrap">
+                  <canvas id="gauge-heat" width="100" height="60"></canvas>
+                  <div class="gauge-val" id="gauge-heat-val" style="color:#f87171;">5.1</div>
+                  <div class="gauge-lbl">kW Incalzire</div>
+                </div>
+              </div>
+              <div style="margin-top:12px;">
+                <table class="info-table">
+                  <tr><th>Indicator</th><th>Valoare</th><th>Comparatie cu hidraulic</th></tr>
+                  <tr><td>Consum mediu ciclu</td><td>0.094 kWh</td><td>↓ 62% vs hidraulic</td></tr>
+                  <tr><td>Consum zilnic (est.)</td><td>~108 kWh</td><td>↓ 58% vs hidraulic</td></tr>
+                  <tr><td>Factor putere</td><td>0.97</td><td>Excelent (servo-electric)</td></tr>
+                  <tr><td>Recuperare energie</td><td>Da (frana regenerativa)</td><td>+8% eficienta</td></tr>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- screen-area -->
+
+      <!-- PHASE BAR -->
+      <div id="phase-bar">
+        <div class="phase-seg inactive ph-plastify" id="ph-plast">Plastifiere</div>
+        <div class="phase-seg inactive ph-close" id="ph-close">Inchidere</div>
+        <div class="phase-seg inactive ph-inject" id="ph-inject">Injectare</div>
+        <div class="phase-seg inactive ph-hold" id="ph-hold">Mentinere</div>
+        <div class="phase-seg inactive ph-cool" id="ph-cool">Racire</div>
+        <div class="phase-seg inactive ph-open" id="ph-open">Deschidere</div>
+        <div class="phase-seg inactive ph-eject" id="ph-eject">Ejectare</div>
+      </div>
+
+      <!-- CYCLE INFO -->
+      <div id="cycle-panel">
+        <div class="cyc-box highlight"><label>Cycle Time:</label><span class="cyc-val" id="cyc-time">0.00 s</span></div>
+        <div class="cyc-box"><label>Injectare:</label><span class="cyc-val" id="cyc-inj">0.00 s</span></div>
+        <div class="cyc-box"><label>Mentinere:</label><span class="cyc-val" id="cyc-hold">0.00 s</span></div>
+        <div class="cyc-box"><label>Racire:</label><span class="cyc-val" id="cyc-cool">0.00 s</span></div>
+        <div class="cyc-box"><label>Plastifiere:</label><span class="cyc-val" id="cyc-plast">0.00 s</span></div>
+        <div class="cyc-box" style="margin-left:auto;"><label>Stare:</label><span class="cyc-val" id="machine-state" style="color:var(--text-dim);">OPRIT</span></div>
+      </div>
+
+      <!-- CONTROL BAR -->
+      <div id="control-bar">
+        <button class="ctrl-btn btn-green" id="btn-start" onclick="startCycle()">▶ START CICLU AUTO</button>
+        <button class="ctrl-btn btn-red disabled" id="btn-stop" onclick="stopCycle()">■ STOP</button>
+        <button class="ctrl-btn btn-blue" onclick="manualClose()">← Inchide Matrita</button>
+        <button class="ctrl-btn btn-blue" onclick="manualOpen()">→ Deschide Matrita</button>
+        <button class="ctrl-btn btn-amber" onclick="manualEject()">⬆ Eject Manual</button>
+        <button class="ctrl-btn btn-gray" onclick="toggleMotor()" id="btn-motor">⚙ Motor ON</button>
+        <button class="ctrl-btn btn-gray" onclick="toggleHeat()" id="btn-heat">🌡 Incalzire ON</button>
+        <div id="estop" onclick="eStop()">E<br>STOP</div>
+      </div>
+
+    </div><!-- center -->
+
+    <!-- RIGHT PANEL -->
+    <div id="right-panel">
+
+      <!-- Machine Status -->
+      <div class="rp-section">
+        <div class="rp-hdr">Status Masina</div>
+        <div class="rp-body">
+          <div class="rp-row"><span class="rp-lbl">Motor Servo</span><span class="rp-val green" id="rp-motor">OFF</span></div>
+          <div class="rp-row"><span class="rp-lbl">Incalzire</span><span class="rp-val" id="rp-heat" style="color:var(--text-dim)">OFF</span></div>
+          <div class="rp-row"><span class="rp-lbl">Racire Apa</span><span class="rp-val" id="rp-water" style="color:var(--text-dim)">OFF</span></div>
+          <div class="rp-row"><span class="rp-lbl">Modul Auto</span><span class="rp-val" id="rp-auto" style="color:var(--text-dim)">OFF</span></div>
+          <div class="rp-row"><span class="rp-lbl">Alarme Active</span><span class="rp-val red" id="rp-alarms">0</span></div>
+        </div>
+      </div>
+
+      <!-- Real-time values -->
+      <div class="rp-section">
+        <div class="rp-hdr">Valori Real-Time</div>
+        <div class="rp-body">
+          <div class="rp-row"><span class="rp-lbl">Poz. Surub</span><span class="rp-val" id="rt-screw">80.0 mm</span></div>
+          <div class="rp-row"><span class="rp-lbl">Poz. Matrita</span><span class="rp-val" id="rt-mold">0.0 mm</span></div>
+          <div class="rp-row"><span class="rp-lbl">Pres. Injectare</span><span class="rp-val" id="rt-pinj">0.0 Mpa</span></div>
+          <div class="rp-row"><span class="rp-lbl">Viteza Surub</span><span class="rp-val" id="rt-vscrew">0 rpm</span></div>
+          <div class="rp-row"><span class="rp-lbl">Cuplaj</span><span class="rp-val" id="rt-torque">0 Nm</span></div>
+          <div class="rp-row"><span class="rp-lbl">Forta Inchidere</span><span class="rp-val" id="rt-fclose">1500 kN</span></div>
+        </div>
+      </div>
+
+      <!-- Temperatures summary -->
+      <div class="rp-section">
+        <div class="rp-hdr">Temperature Zone</div>
+        <div class="rp-body" id="rp-temps"></div>
+      </div>
+
+      <!-- Energy -->
+      <div class="rp-section">
+        <div class="rp-hdr">Energie</div>
+        <div class="rp-body">
+          <div class="rp-row"><span class="rp-lbl">Putere Totala</span><span class="rp-val blue" id="rp-power">0.0 kW</span></div>
+          <div class="rp-row"><span class="rp-lbl">Energie Ciclu</span><span class="rp-val" id="rp-ecycle">0.00 kWh</span></div>
+          <div class="rp-row"><span class="rp-lbl">Curent Motor</span><span class="rp-val" id="rp-current">0 A</span></div>
+        </div>
+      </div>
+
+      <!-- Alarms -->
+      <div class="rp-section" id="rp-alarm-box" style="display:none;">
+        <div class="rp-hdr" style="color:#fca5a5;">⚠ ALARME ACTIVE</div>
+        <div class="rp-body" id="rp-alarm-list"></div>
+      </div>
+
+    </div><!-- right-panel -->
+
+  </div><!-- main -->
+
+</div><!-- machine-frame -->
+
+<!-- ALARM OVERLAY -->
+<div id="alarm-overlay">
+  <div id="alarm-box">
+    <div id="alarm-hdr">
+      <span style="font-size:18px;">⚠</span>
+      <h3>ALARME SISTEM – Zhafir VE1500</h3>
+      <button id="alarm-close" onclick="toggleAlarms()">Inchide</button>
+    </div>
+    <div id="alarm-list"></div>
+    <div style="padding:8px;border-top:1px solid var(--border);display:flex;gap:6px;justify-content:flex-end;">
+      <button class="ctrl-btn btn-amber" onclick="resetAlarms()">Reset Alarme</button>
+      <button class="ctrl-btn btn-gray" onclick="toggleAlarms()">Inchide</button>
+    </div>
+  </div>
+</div>
+
+<!-- RECIPE OVERLAY -->
+<div id="recipe-overlay">
+  <div id="recipe-box">
+    <div id="recipe-hdr">
+      <span style="font-size:16px;margin-right:8px;">💾</span>
+      <h3>Retete Salvate</h3>
+      <button class="ctrl-btn btn-gray" style="margin-left:auto;padding:3px 10px;font-size:10px;" onclick="hideRecipes()">✕</button>
+    </div>
+    <div class="recipe-list" id="recipe-list"></div>
+    <div class="recipe-footer">
+      <button class="ctrl-btn btn-green" onclick="saveCurrentRecipe()">💾 Salveaza Curenta</button>
+      <button class="ctrl-btn btn-gray" onclick="hideRecipes()">Inchide</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+const state = {
+  mode: 'Auto',
+  motorOn: false,
+  heatOn: false,
+  waterOn: false,
+  running: false,
+  cycleCount: 787650,
+  shiftCount: 0,
+  phase: null, // current cycle phase
+  phaseTimer: 0,
+  cycleTime: 0,
+  cycleInterval: null,
+  alarms: [],
+  selectedProduct: 0,
+  screwPos: 80, // mm
+  moldPos: 0,   // mm, 0=open, 400=closed
+  moldFill: 0,  // 0-100%
+  injPressure: 0,
+  injVelocity: 0,
+  screwRpm: 0,
+  power: 0,
+  temps: [185.1, 195.0, 215.0, 219.9, 200.0],
+  tempSet: [185.0, 195.0, 215.0, 220.0, 200.0],
+  screwFlightOffset: 0,
+  estopActive: false,
+};
+
+const PHASES = ['plastify','close','inject','hold','cool','open','eject'];
+const PHASE_TIMES = { plastify:1.5, close:1.0, inject:0.8, hold:1.0, cool:2.5, open:1.0, eject:0.4 };
+
+const PRODUCTS = [
+  { name:'Capac Mic', icon:'🔵', material:'PP Homo', weight:'12g', temps:[185,195,210,220,200], injectV:80, holdP:80, coolT:2.0, screwPos:50 },
+  { name:'Galeata 5L', icon:'🪣', material:'PP Copo', weight:'280g', temps:[185,195,215,222,200], injectV:70, holdP:100, coolT:4.0, screwPos:120 },
+  { name:'Galeata 10L', icon:'🧺', material:'PP Copo', weight:'520g', temps:[190,200,218,225,205], injectV:65, holdP:110, coolT:6.5, screwPos:160 },
+  { name:'Galeata 18L', icon:'🏗️', material:'PP Homo', weight:'920g', temps:[190,200,220,228,210], injectV:60, holdP:120, coolT:10.0, screwPos:200 },
+];
+
+const RECIPES = [
+  { name:'Capac_Mic_v3', product:'Capac Mic', date:'2026-04-12' },
+  { name:'Galea5L_PP_std', product:'Galeata 5L', date:'2026-03-28' },
+  { name:'Galea10L_Winter', product:'Galeata 10L', date:'2026-02-15' },
+];
+
+// ============================================================
+// INIT
+// ============================================================
+window.addEventListener('load', () => {
+  buildTempZones();
+  buildProductCards();
+  buildRecipeList();
+  buildRpTemps();
+  updateClock();
+  setInterval(updateClock, 1000);
+  setInterval(updateRealtime, 200);
+  drawMoldCanvas();
+  drawGauges();
+  setInterval(drawGauges, 1000);
+  // Start heat sim
+  if(!state.heatOn) simulateHeating();
+});
+
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  const s = String(now.getSeconds()).padStart(2,'0');
+  document.getElementById('clock').textContent = `${h}:${m}:${s}`;
+}
+
+// ============================================================
+// TEMP ZONES BUILD
+// ============================================================
+function buildTempZones() {
+  const row = document.getElementById('temp-row');
+  const labels = ['Zona 1 (Duza)','Zona 2','Zona 3','Zona 4','Zona 5 (Hopper)'];
+  row.innerHTML = '';
+  labels.forEach((lbl,i) => {
+    const pct = ((state.temps[i] - 150) / 100 * 100).toFixed(0);
+    const div = document.createElement('div');
+    div.className = 'temp-zone' + (state.heatOn ? ' heating' : '');
+    div.id = `tz-${i}`;
+    div.innerHTML = `
+      <div class="zone-lbl">${lbl}</div>
+      <div class="temp-real" id="tr-${i}">${state.temps[i].toFixed(1)}</div>
+      <div style="color:var(--text-dim);font-size:8px;">Real °C</div>
+      <input class="hmi-input" style="width:52px;font-size:10px;" id="ts-${i}" value="${state.tempSet[i]}" onchange="setTempZone(${i},this.value)">
+      <div style="color:var(--text-dim);font-size:8px;">Set °C</div>
+      <div class="temp-bar"><div class="temp-bar-fill" id="tb-${i}" style="width:${pct}%"></div></div>
+    `;
+    row.appendChild(div);
+  });
+  buildRpTemps();
+}
+
+function buildRpTemps() {
+  const el = document.getElementById('rp-temps');
+  if(!el) return;
+  el.innerHTML = '';
+  const labels = ['Z1','Z2','Z3','Z4','Z5'];
+  labels.forEach((lbl,i) => {
+    const div = document.createElement('div');
+    div.className = 'rp-row';
+    div.innerHTML = `<span class="rp-lbl">${lbl}</span><span class="rp-val red" id="rpt-${i}">${state.temps[i].toFixed(1)} °C</span>`;
+    el.appendChild(div);
+  });
+}
+
+function setTempZone(i, val) {
+  state.tempSet[i] = parseFloat(val) || state.tempSet[i];
+}
+
+function simulateHeating() {
+  setInterval(() => {
+    if(!state.heatOn) return;
+    let allOk = true;
+    for(let i=0;i<5;i++) {
+      const diff = state.tempSet[i] - state.temps[i];
+      if(Math.abs(diff) > 0.5) {
+        state.temps[i] += diff * 0.05 + (Math.random()-0.5)*0.3;
+        allOk = false;
+      } else {
+        state.temps[i] += (Math.random()-0.5)*0.2;
+      }
+      const el = document.getElementById(`tr-${i}`);
+      if(el) el.textContent = state.temps[i].toFixed(1);
+      const rp = document.getElementById(`rpt-${i}`);
+      if(rp) rp.textContent = state.temps[i].toFixed(1)+' °C';
+      const tb = document.getElementById(`tb-${i}`);
+      if(tb) { const pct = Math.min(100,Math.max(0,(state.temps[i]-150)/100*100)); tb.style.width = pct+'%'; }
+    }
+    if(allOk && state.alarms.find(a=>a.code==='T001')) {
+      state.alarms = state.alarms.filter(a=>a.code!=='T001');
+      updateAlarmCount();
+    }
+  }, 500);
+}
+
+// ============================================================
+// PRODUCTS
+// ============================================================
+function buildProductCards() {
+  const grid = document.getElementById('product-grid');
+  grid.innerHTML = '';
+  PRODUCTS.forEach((p,i) => {
+    const div = document.createElement('div');
+    div.className = 'product-card' + (i===state.selectedProduct?' selected':'');
+    div.onclick = () => selectProduct(i);
+    div.innerHTML = `
+      <div class="pc-icon">${p.icon}</div>
+      <div class="pc-name">${p.name}</div>
+      <div class="pc-mat">${p.material}</div>
+      <div class="pc-weight">${p.weight}</div>
+    `;
+    grid.appendChild(div);
+  });
+}
+
+function selectProduct(i) {
+  state.selectedProduct = i;
+  buildProductCards();
+}
+
+function loadProduct() {
+  const p = PRODUCTS[state.selectedProduct];
+  // Apply temps
+  p.temps.forEach((t,i) => { state.tempSet[i] = t; const el = document.getElementById(`ts-${i}`); if(el) el.value=t; });
+  // Apply inject speed
+  document.getElementById('i-v-s0').value = p.injectV;
+  document.getElementById('pm-t').value = (p.coolT/3).toFixed(2);
+  document.getElementById('aux-tr').value = p.coolT;
+  showToast(`✅ Reteta "${p.name}" incarcata cu succes!`);
+}
+
+// ============================================================
+// RECIPES
+// ============================================================
+function buildRecipeList() {
+  const list = document.getElementById('recipe-list');
+  list.innerHTML = '';
+  RECIPES.forEach((r,i) => {
+    const div = document.createElement('div');
+    div.className = 'recipe-item';
+    div.onclick = () => { loadRecipe(i); hideRecipes(); };
+    div.innerHTML = `<span class="r-icon">💾</span><div><div class="r-name">${r.name}</div><div class="r-mat">${r.product} | ${r.date}</div></div>`;
+    list.appendChild(div);
+  });
+}
+
+function loadRecipe(i) { showToast(`📂 Reteta "${RECIPES[i].name}" incarcata!`); }
+function showRecipes() { document.getElementById('recipe-overlay').classList.add('show'); }
+function hideRecipes() { document.getElementById('recipe-overlay').classList.remove('show'); }
+function saveCurrentRecipe() { showToast('💾 Reteta salvata: Reteta_' + new Date().toISOString().slice(0,10)); hideRecipes(); }
+
+// ============================================================
+// MODE / PAGE / TAB SWITCHING
+// ============================================================
+function setMode(m) {
+  state.mode = m;
+  ['Manual','Auto','Setare'].forEach(mm => {
+    const el = document.getElementById('tab-'+mm.toLowerCase());
+    if(el) el.classList.toggle('active', mm===m);
+  });
+  showToast(`Mod schimbat: ${m}`);
+}
+
+function switchPage(p) {
+  document.querySelectorAll('.screen-page').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+  const page = document.getElementById('page-'+p);
+  if(page) page.classList.add('active');
+  const nav = document.getElementById('nav-'+p);
+  if(nav) nav.classList.add('active');
+  if(p==='energy') drawGauges();
+}
+
+function switchTab(t) {
+  document.querySelectorAll('.tab-btn').forEach((el,i) => el.classList.toggle('active', i===['main','mold','eject','expert','monitor'].indexOf(t)));
+}
+
+// ============================================================
+// MOTOR / HEAT CONTROLS
+// ============================================================
+function toggleMotor() {
+  state.motorOn = !state.motorOn;
+  const btn = document.getElementById('btn-motor');
+  btn.textContent = state.motorOn ? '⚙ Motor OFF' : '⚙ Motor ON';
+  btn.className = 'ctrl-btn ' + (state.motorOn ? 'btn-red' : 'btn-gray');
+  document.getElementById('rp-motor').textContent = state.motorOn ? 'ON' : 'OFF';
+  document.getElementById('rp-motor').style.color = state.motorOn ? 'var(--green)' : 'var(--text-dim)';
+  showToast(state.motorOn ? '⚙ Motor Servo PORNIT' : '⚙ Motor Servo OPRIT');
+}
+
+function toggleHeat() {
+  state.heatOn = !state.heatOn;
+  const btn = document.getElementById('btn-heat');
+  btn.textContent = state.heatOn ? '🌡 Incalzire OFF' : '🌡 Incalzire ON';
+  btn.className = 'ctrl-btn ' + (state.heatOn ? 'btn-red' : 'btn-gray');
+  document.getElementById('rp-heat').textContent = state.heatOn ? 'ON' : 'OFF';
+  document.getElementById('rp-heat').style.color = state.heatOn ? '#f87171' : 'var(--text-dim)';
+  document.querySelectorAll('.temp-zone').forEach(el => el.classList.toggle('heating', state.heatOn));
+  if(state.heatOn) {
+    addAlarm('T001','warning','Zone termale se incalzesc...');
+  }
+  showToast(state.heatOn ? '🌡 Incalzire PORNITA' : '🌡 Incalzire OPRITA');
+}
+
+// ============================================================
+// CYCLE
+// ============================================================
+let phaseIndex = -1;
+let phaseStartTime = 0;
+let cycleStartTime = 0;
+let cycleInj=0,cyclePM=0,cycleCool=0,cyclePlast=0;
+let timerTick = null;
+
+function startCycle() {
+  if(state.estopActive) { showToast('⛔ E-STOP ACTIV! Deblocati E-Stop.'); return; }
+  if(!state.motorOn) { showToast('⚠ Porniti motorul servo mai intai!'); return; }
+  if(!state.heatOn) { addAlarm('T002','warning','Temperaturi sub setare – verificati incalzirea!'); }
+  if(state.running) return;
+  state.running = true;
+  document.getElementById('btn-start').classList.add('disabled');
+  document.getElementById('btn-stop').classList.remove('disabled');
+  document.getElementById('rp-auto').textContent = 'ON';
+  document.getElementById('rp-auto').style.color = 'var(--green)';
+  phaseIndex = -1;
+  cycleStartTime = performance.now();
+  nextPhase();
+}
+
+function stopCycle() {
+  state.running = false;
+  if(timerTick) { clearTimeout(timerTick); timerTick=null; }
+  PHASES.forEach(p => { const el=document.getElementById('ph-'+p.slice(0,4)+'ify'===p?'ph-plast':'ph-'+p.slice(0,4)); if(el){el.classList.remove('active');el.classList.add('inactive');} });
+  // reset all phases
+  ['ph-plast','ph-close','ph-inject','ph-hold','ph-cool','ph-open','ph-eject'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){el.classList.remove('active');el.classList.add('inactive');}
+  });
+  document.getElementById('machine-state').textContent='OPRIT';
+  document.getElementById('machine-state').style.color='var(--text-dim)';
+  document.getElementById('btn-start').classList.remove('disabled');
+  document.getElementById('btn-stop').classList.add('disabled');
+  document.getElementById('rp-auto').textContent='OFF';
+  document.getElementById('rp-auto').style.color='var(--text-dim)';
+  document.getElementById('ind-run').className='indicator ind-off';
+  state.injPressure=0; state.injVelocity=0; state.screwRpm=0; state.power=0;
+  showToast('■ Ciclu oprit.');
+}
+
+const PHASE_IDS = ['ph-plast','ph-close','ph-inject','ph-hold','ph-cool','ph-open','ph-eject'];
+const PHASE_NAMES = ['PLASTIFIERE','INCHIDERE','INJECTARE','MENTINERE','RACIRE','DESCHIDERE','EJECTARE'];
+const PHASE_KEYS = ['plastify','close','inject','hold','cool','open','eject'];
+
+function nextPhase() {
+  if(!state.running) return;
+  phaseIndex++;
+  if(phaseIndex >= PHASE_KEYS.length) {
+    // Cycle complete
+    state.cycleCount++;
+    state.shiftCount++;
+    document.getElementById('cycle-count').textContent = state.cycleCount.toLocaleString();
+    document.getElementById('inf-cycles').textContent = state.cycleCount.toLocaleString();
+    document.getElementById('inf-shift').textContent = state.shiftCount;
+    const ct = ((performance.now()-cycleStartTime)/1000).toFixed(2);
+    document.getElementById('cycle-time-top').textContent = ct;
+    checkDefects();
+    phaseIndex = -1;
+    cycleStartTime = performance.now();
+    nextPhase();
+    return;
+  }
+  // Highlight phase
+  PHASE_IDS.forEach((id,i)=>{
+    const el=document.getElementById(id);
+    if(!el)return;
+    el.classList.remove('active','inactive','done');
+    if(i<phaseIndex) el.classList.add('inactive');
+    else if(i===phaseIndex) el.classList.add('active');
+    else el.classList.add('inactive');
+  });
+  const phaseKey = PHASE_KEYS[phaseIndex];
+  const phaseDur = getPhaseDuration(phaseKey);
+  document.getElementById('machine-state').textContent = PHASE_NAMES[phaseIndex];
+  document.getElementById('machine-state').style.color = '#60a5fa';
+  document.getElementById('ind-run').className = 'indicator ind-green';
+  phaseStartTime = performance.now();
+  animatePhase(phaseKey, phaseDur);
+  timerTick = setTimeout(()=>nextPhase(), phaseDur*1000);
+}
+
+function getPhaseDuration(key) {
+  const base = PHASE_TIMES[key];
+  const product = PRODUCTS[state.selectedProduct];
+  if(key==='cool') return parseFloat(document.getElementById('aux-tr').value)||2.5;
+  if(key==='hold') return parseFloat(document.getElementById('pm-t').value)||1.0;
+  return base;
+}
+
+function animatePhase(key, dur) {
+  const start = performance.now();
+  function tick() {
+    if(!state.running) return;
+    const elapsed = (performance.now()-start)/1000;
+    const t = Math.min(elapsed/dur, 1);
+    switch(key) {
+      case 'plastify': animatePlastify(t, dur); break;
+      case 'close': animateClose(t); break;
+      case 'inject': animateInject(t); break;
+      case 'hold': animateHold(t); break;
+      case 'cool': animateCool(t); break;
+      case 'open': animateOpen(t); break;
+      case 'eject': animateEject(t); break;
+    }
+    // Update cycle time
+    const ct = ((performance.now()-cycleStartTime)/1000).toFixed(2);
+    document.getElementById('cyc-time').textContent = ct+' s';
+    if(t<1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+// ---- PHASE ANIMATIONS ----
+function animatePlastify(t, dur) {
+  state.screwRpm = 340 * (1-t);
+  const targetPos = 80;
+  state.screwPos = 20 + (targetPos-20)*t;
+  state.power = 8 + Math.random()*2;
+  state.screwFlightOffset += 3;
+  updateScrewVisual();
+  document.getElementById('rt-vscrew').textContent = Math.round(state.screwRpm)+' rpm';
+  document.getElementById('cyc-plast').textContent = (t*dur).toFixed(2)+' s';
+  cyclePlast = t*dur;
+}
+function animateClose(t) {
+  state.moldPos = t * 400;
+  state.power = 12+Math.random()*3;
+  setMoldPos(t);
+}
+function animateInject(t) {
+  const maxP = parseFloat(document.getElementById('i-ps-s0').value)||25;
+  const maxV = parseFloat(document.getElementById('i-v-s0').value)||80;
+  state.injPressure = maxP * Math.sin(t*Math.PI);
+  state.injVelocity = maxV * (1-t*0.3);
+  state.moldFill = t*100;
+  state.power = 25+Math.random()*5;
+  setMoldFill(t*100);
+  const pPct = (state.injPressure/30*100).toFixed(0);
+  const vPct = (state.injVelocity/120*100).toFixed(0);
+  document.getElementById('inj-pr-bar').style.width = pPct+'%';
+  document.getElementById('inj-v-bar').style.width = vPct+'%';
+  document.getElementById('inj-pr-val').textContent = state.injPressure.toFixed(1);
+  document.getElementById('inj-v-val').textContent = state.injVelocity.toFixed(1);
+  document.getElementById('rt-pinj').textContent = state.injPressure.toFixed(1)+' Mpa';
+  const ct = parseFloat(document.getElementById('pm-t').value)||1;
+  cycleInj = t*ct;
+  document.getElementById('cyc-inj').textContent = cycleInj.toFixed(2)+' s';
+}
+function animateHold(t) {
+  const maxP = parseFloat(document.getElementById('pm-pr').value)||100;
+  state.injPressure = (maxP/10) * (1-t*0.3) + Math.random()*0.5;
+  state.power = 10+Math.random()*2;
+  document.getElementById('inj-pr-bar').style.width = (state.injPressure/30*100).toFixed(0)+'%';
+  document.getElementById('inj-pr-val').textContent = state.injPressure.toFixed(1);
+  document.getElementById('rt-pinj').textContent = state.injPressure.toFixed(1)+' Mpa';
+  cyclePM = t;
+  document.getElementById('cyc-hold').textContent = cyclePM.toFixed(2)+' s';
+}
+function animateCool(t) {
+  const dur = parseFloat(document.getElementById('aux-tr').value)||2.5;
+  state.injPressure = 0; state.injVelocity = 0;
+  state.power = 5+Math.random()*1;
+  document.getElementById('inj-pr-bar').style.width='0%';
+  document.getElementById('inj-v-bar').style.width='0%';
+  // plastifiere during cooling
+  state.screwPos = 80 - 60*t;
+  state.screwRpm = 200;
+  state.screwFlightOffset += 4;
+  updateScrewVisual();
+  cycleCool = t*dur;
+  document.getElementById('cyc-cool').textContent = cycleCool.toFixed(2)+' s';
+}
+function animateOpen(t) {
+  state.moldPos = 400 * (1-t);
+  state.power = 10+Math.random()*2;
+  setMoldPos(1-t);
+  state.moldFill = 100*(1-t*0.1);
+}
+function animateEject(t) {
+  state.power = 3+Math.random();
+  if(t>0.5) { state.moldFill = 100*(1-((t-0.5)*2)); setMoldFill(state.moldFill); }
+}
+
+// ---- MOLD VISUAL ----
+function setMoldPos(t) { // t=0 open, t=1 closed
+  const maxGap = 40;
+  const left = document.getElementById('mold-left');
+  const right = document.getElementById('mold-right');
+  if(left) left.style.transform = `translateX(${t*maxGap}px)`;
+  if(right) right.style.transform = `translateX(${-t*maxGap}px)`;
+  const txt = document.getElementById('mold-state-txt');
+  const pos = document.getElementById('mold-pos-txt');
+  const bar = document.getElementById('mold-pos-bar');
+  if(txt) { txt.textContent = t<0.05?'DESCHISA':t>0.95?'INCHISA':'IN MISCARE'; txt.style.color=t>0.95?'var(--red)':t<0.05?'var(--green)':'var(--amber)'; }
+  if(pos) pos.textContent = Math.round(t*400)+' mm';
+  if(bar) bar.style.width=(t*100)+'%';
+  document.getElementById('rt-mold').textContent = Math.round(t*400)+' mm';
+}
+function setMoldFill(pct) {
+  const fill = document.getElementById('mold-fill');
+  if(fill) { fill.style.height = pct+'%'; fill.style.opacity = pct>0?'0.85':'0'; }
+}
+
+// ---- SCREW VISUAL ----
+function updateScrewVisual() {
+  const maxPos = 200; const minW = 20; const maxW = 140;
+  const w = minW + (maxW-minW)*(state.screwPos/maxPos);
+  const body = document.getElementById('screw-body');
+  const flights = document.getElementById('screw-flights');
+  if(body) body.style.width = w+'px';
+  if(flights) flights.style.backgroundPosition = state.screwFlightOffset+'px 0';
+  const txt = document.getElementById('screw-pos-txt');
+  if(txt) txt.textContent = state.screwPos.toFixed(1)+' mm';
+  const bar = document.getElementById('screw-bar');
+  if(bar) bar.style.width = (state.screwPos/maxPos*100)+'%';
+  document.getElementById('rt-screw').textContent = state.screwPos.toFixed(1)+' mm';
+}
+
+// ---- MANUAL CONTROLS ----
+function manualClose() {
+  if(state.running) return;
+  if(!state.motorOn) { showToast('⚠ Porniti motorul!'); return; }
+  animateMoldManual(1);
+}
+function manualOpen() {
+  if(state.running) return;
+  if(!state.motorOn) { showToast('⚠ Porniti motorul!'); return; }
+  animateMoldManual(0);
+}
+function animateMoldManual(target) {
+  const start = performance.now();
+  const startT = state.moldPos/400;
+  const dur = 1000;
+  function tick() {
+    const t2 = Math.min((performance.now()-start)/dur,1);
+    const cur = startT + (target-startT)*t2;
+    setMoldPos(cur);
+    if(t2<1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+function manualEject() {
+  if(state.running) return;
+  showToast('⬆ Ejectare manuala efectuata.');
+  setMoldFill(0);
+}
+
+// ============================================================
+// REALTIME PANEL UPDATE
+// ============================================================
+function updateRealtime() {
+  // power
+  if(state.running) { state.power += (Math.random()-0.5)*0.5; state.power=Math.max(0,state.power); }
+  else if(state.heatOn) { state.power = 4.8+Math.random()*0.4; }
+  else { state.power = 0; }
+  document.getElementById('rp-power').textContent = state.power.toFixed(1)+' kW';
+  document.getElementById('rp-ecycle').textContent = (state.power*0.0077).toFixed(3)+' kWh';
+  document.getElementById('rp-current').textContent = Math.round(state.power*4.2)+' A';
+}
+
+// ============================================================
+// DEFECT CHECK
+// ============================================================
+function checkDefects() {
+  const tr = parseFloat(document.getElementById('aux-tr').value)||2.5;
+  const inj = parseFloat(document.getElementById('i-v-s0').value)||80;
+  const t1 = state.temps[2];
+  if(tr < 1.5) addAlarm('D001','error','SHORT SHOT detectat – timp racire prea scurt!');
+  if(inj > 110) addAlarm('D002','warning','Risc FLASH – viteza injectare prea mare!');
+  if(t1 > 230) addAlarm('D003','warning','Risc BURN MARKS – temperatura Zona 3 prea mare!');
+  if(inj < 30) addAlarm('D004','warning','Risc SINK MARKS – presiune injectare mica!');
+}
+
+// ============================================================
+// ALARMS
+// ============================================================
+function addAlarm(code, type, msg) {
+  if(state.alarms.find(a=>a.code===code)) return;
+  const now = new Date();
+  state.alarms.push({ code, type, msg, time: `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}` });
+  updateAlarmCount();
+  renderAlarmList();
+  updateRpAlarms();
+}
+function updateAlarmCount() {
+  const cnt = state.alarms.length;
+  document.getElementById('rp-alarms').textContent = cnt;
+  const navAlarm = document.getElementById('nav-alarm');
+  if(navAlarm) { navAlarm.classList.toggle('alarm-flashing', cnt>0); }
+}
+function renderAlarmList() {
+  const list = document.getElementById('alarm-list');
+  list.innerHTML = state.alarms.map(a=>`
+    <div class="alarm-item ${a.type}">
+      <span class="alarm-code">${a.code}</span>
+      <span class="alarm-msg">${a.msg}</span>
+      <span class="alarm-time">${a.time}</span>
+    </div>
+  `).join('');
+}
+function updateRpAlarms() {
+  const box = document.getElementById('rp-alarm-box');
+  const list = document.getElementById('rp-alarm-list');
+  if(state.alarms.length>0) {
+    box.style.display='block';
+    list.innerHTML = state.alarms.slice(-3).map(a=>`<div class="rp-row"><span class="rp-lbl" style="color:var(--red);">${a.code}</span><span style="color:var(--amber);font-size:8px;max-width:120px;overflow:hidden;text-overflow:ellipsis;">${a.msg}</span></div>`).join('');
+  } else { box.style.display='none'; }
+}
+function toggleAlarms() {
+  const ov = document.getElementById('alarm-overlay');
+  ov.classList.toggle('show');
+  if(ov.classList.contains('show')) renderAlarmList();
+}
+function resetAlarms() {
+  state.alarms=[];
+  updateAlarmCount();
+  renderAlarmList();
+  updateRpAlarms();
+  showToast('✅ Alarme resetate.');
+}
+
+// ============================================================
+// E-STOP
+// ============================================================
+function eStop() {
+  state.estopActive = !state.estopActive;
+  const btn = document.getElementById('estop');
+  if(state.estopActive) {
+    stopCycle();
+    btn.style.background='radial-gradient(circle at 40% 35%,#ff9090,#ff0000,#990000)';
+    btn.style.boxShadow='0 0 30px rgba(255,0,0,0.9)';
+    addAlarm('E001','error','E-STOP ACTIVAT – Masina oprita de urgenta!');
+    showToast('⛔ E-STOP ACTIVAT!');
+  } else {
+    btn.style.background='radial-gradient(circle at 40% 35%,#ff6060,#cc0000,#7f0000)';
+    btn.style.boxShadow='0 0 15px rgba(255,0,0,0.5)';
+    state.alarms=state.alarms.filter(a=>a.code!=='E001');
+    updateAlarmCount(); updateRpAlarms();
+    showToast('✅ E-STOP deblocat. Puteti reporni masina.');
+  }
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+// ============================================================
+// MOLD CANVAS (cycle phase diagram)
+// ============================================================
+function drawMoldCanvas() {
+  const canvas = document.getElementById('mold-canvas');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,200,80);
+  const phases=[{n:'Plas',c:'#2563b0'},{n:'Inch',c:'#166534'},{n:'Inj',c:'#991b1b'},{n:'Men',c:'#78350f'},{n:'Rac',c:'#1e3a5f'},{n:'Des',c:'#14532d'},{n:'Ej',c:'#92400e'}];
+  const durs=[1.5,1.0,0.8,1.0,2.5,1.0,0.4];
+  const total=durs.reduce((a,b)=>a+b,0);
+  let x=0;
+  phases.forEach((p,i)=>{
+    const w=Math.round((durs[i]/total)*196);
+    ctx.fillStyle=p.c;
+    ctx.fillRect(x+2,10,w-2,40);
+    ctx.fillStyle='rgba(255,255,255,0.5)';
+    ctx.font='7px Courier New';
+    ctx.fillText(p.n,x+3,34);
+    x+=w;
+  });
+  ctx.strokeStyle='rgba(100,150,255,0.3)';
+  ctx.strokeRect(2,10,196,40);
+  ctx.fillStyle='rgba(100,150,255,0.5)';
+  ctx.font='8px Courier New';
+  ctx.fillText('Diagrama Ciclu Injectie',40,70);
+}
+
+// ============================================================
+// ENERGY GAUGES
+// ============================================================
+function drawGauge(canvasId, value, max, color) {
+  const canvas=document.getElementById(canvasId);
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,100,60);
+  const cx=50,cy=55,r=40;
+  // background arc
+  ctx.beginPath(); ctx.arc(cx,cy,r,Math.PI,0,false);
+  ctx.strokeStyle='#1a2a40'; ctx.lineWidth=8; ctx.stroke();
+  // value arc
+  const angle = Math.PI*(value/max);
+  ctx.beginPath(); ctx.arc(cx,cy,r,Math.PI,Math.PI+angle,false);
+  ctx.strokeStyle=color; ctx.lineWidth=8; ctx.lineCap='round'; ctx.stroke();
+  // tick marks
+  ctx.lineWidth=1; ctx.strokeStyle='rgba(255,255,255,0.1)';
+  for(let i=0;i<=10;i++){
+    const a=Math.PI+i*Math.PI/10;
+    const x1=cx+Math.cos(a)*(r-4),y1=cy+Math.sin(a)*(r-4);
+    const x2=cx+Math.cos(a)*r,y2=cy+Math.sin(a)*r;
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  }
+}
+function drawGauges() {
+  drawGauge('gauge-total',state.running?12.4+Math.random():state.heatOn?5:0.5,30,'#22c55e');
+  drawGauge('gauge-inject',state.running?4.2+Math.random():0.1,15,'#f59e0b');
+  drawGauge('gauge-plast',state.running?3.1+Math.random():0.1,15,'#3b82f6');
+  drawGauge('gauge-heat',state.heatOn?5.1+Math.random()*0.3:0.2,10,'#ef4444');
+  if(state.running){
+    const total=(12.4+Math.random()).toFixed(1);
+    document.getElementById('gauge-total-val').textContent=total;
+    document.getElementById('gauge-inject-val').textContent=(4.2+Math.random()).toFixed(1);
+    document.getElementById('gauge-plast-val').textContent=(3.1+Math.random()).toFixed(1);
+    document.getElementById('gauge-heat-val').textContent=(5.1+Math.random()*0.3).toFixed(1);
+  }
+}
+
+// ============================================================
+// PARAM CHANGED (trigger defect analysis hint)
+// ============================================================
+function paramChanged() {
+  // minor visual feedback could go here
+}
+function resetShiftCount() {
+  state.shiftCount=0;
+  document.getElementById('inf-shift').textContent='0';
+  showToast('🔄 Contor schimb resetat.');
+}
+
+// ============================================================
+// INIT TEMP ZONES BUILD (also in load)
+// ============================================================
+buildTempZones();
+</script>
+</body>
+</html>
